@@ -1,0 +1,48 @@
+{
+  "_comment": "Source UNIQUE des poids/seuils. app.js (dashboard) et Edge-Score.ps1 (notif Telegram) chargent CE fichier — plus de divergence possible entre les deux moteurs.",
+
+  "weights": {
+    "macroRegime": 1.5,
+    "priceActionM15": 2.5,
+    "crossAssetConfirm": 1,
+    "liquidityIntraday": 1,
+    "dailyRsi": 0.5,
+    "debasementTrade": 0.5,
+    "cotContrarian": 1
+  },
+
+  "_weights_reequilibrage_2026_08_07": "macroRegime baisse de 3 a 1.5, priceActionM15 monte de 2 a 2.5 : valide par Backtest-WeightSensitivity.py (505 jours de data.js) -- le score macro a une correlation quasi nulle avec le rendement forward (0.001-0.07 selon horizon, Backtest-MacroBias.py) et s'est trompe de sens pendant le rally du 04-07/08/2026 (voir edge_log.txt), pendant que le momentum M15 (desormais filtre par confirmation H4, cf priceActionM15 et le parametre H4Gold de Get-SimplifiedEdgeScore/getM15Trend) a un edge empirique significatif sur 4.2 ans de donnees M15 reelles (Backtest-M15-H4Filter.py, t-stat=3.35). A revalider si l'echantillon macro s'enrichit au-dela d'un seul regime haussier structurel.",
+
+  "_maxScore_comment": "Somme des poids ci-dessus = 8 (recalculee suite au reequilibrage macroRegime/priceActionM15 du 07/08/2026). Recalculee dynamiquement dans le code, ne pas modifier a la main sans revalider avec Backtest-MacroBias.py",
+  "maxScore": 8,
+
+  "thresholds": {
+    "strongEdgeFraction": 0.5,
+    "moderateEdgeFraction": 0.25
+  },
+
+  "m15Trend": {
+    "confirmCandles": 2,
+    "bufferPct": 0.03,
+    "dropLastCandle": true,
+    "_dropLastCandle_comment": "La derniere bougie M15 renvoyee par Yahoo est generalement EN FORMATION (non cloturee). L'inclure fait clignoter/repeindre le signal en cours de bougie. On l'exclut systematiquement du calcul de tendance."
+  },
+
+  "cot": {
+    "lookbackWeeks": 26,
+    "extremeZ": 1.5,
+    "_logic_comment": "Z-score du net Managed Money (COMEX Gold, rapport Disaggregated CFTC) sur 26 semaines. Contrarian : positionnement extreme long (z > +1.5) = tilt baissier ; extreme short (z < -1.5) = tilt haussier. Rapport hebdo, publie avec ~3 jours de lag (donnees au mardi, publiees le vendredi) -> l'info est structurellement en retard, poids volontairement limite a 1/9."
+  },
+
+  "dataHealth": {
+    "criticalSeries": ["dailyGold", "m15Gold", "realYields", "dxy"],
+    "staleAfterHoursBySeries": {
+      "dailyGold": 48,
+      "m15Gold": 50,
+      "dxy": 48,
+      "realYields": 120
+    },
+    "staleAfterHours": 30,
+    "_comment": "Seuils differencies par frequence de publication ET par fermeture de marche. m15Gold : le marche de l'or ferme du vendredi ~22h UTC au dimanche ~22h UTC (~48h) -> un seuil de 6h declenchait un faux DONNEES INDISPONIBLES a CHAQUE week-end. Remonte a 50h pour survivre a la fermeture normale, au prix de ne plus detecter une panne Yahoo de quelques heures en semaine (le badge 'Donnees a jour' + le compte a rebours de rechargement auto restent la meilleure indication de fraicheur au jour le jour). dailyGold/dxy sont quotidiens mais fermes le week-end -> 48h absorbe un lundi matin normalement. realYields (FRED DFII10) est publie uniquement les jours ouvres avec ~1 jour de lag structurel -> un vendredi + week-end + lag peut facilement depasser 80-90h sans etre une panne -> seuil a 120h (5 jours). 'staleAfterHours' reste le fallback generique si une serie n'a pas d'entree dediee."
+  }
+}

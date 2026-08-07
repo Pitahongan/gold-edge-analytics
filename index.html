@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Edge Analytics - Décision M15 & Macro Monitor</title>
+    
+    <!-- Google Fonts: Outfit & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="index.css">
+    
+    <!-- Lucide Icons (fichier local, plus fiable que le CDN) -->
+    <script src="vendor/lucide.js"></script>
+    
+    <!-- TradingView Lightweight Charts (fichier local, plus fiable que le CDN) -->
+    <script src="vendor/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon"><i data-lucide="zap"></i></div>
+                <div class="logo-text">
+                    <h1>GOLD EDGE <span>M15</span></h1>
+                    <p class="tagline">Dashboard d'aide à la décision M15 pour le trading de l'Or (XAU/USD)</p>
+                </div>
+            </div>
+            <div class="update-status">
+                <span class="pulse-indicator"></span>
+                <span class="status-text">Données à jour : <strong id="update-time">-</strong></span>
+                <span class="status-text" id="auto-reload-indicator" style="opacity:0.6; font-size:0.85em;"></span>
+                <button class="btn-refresh" onclick="handleRefreshClick();">
+                    <i data-lucide="refresh-cw"></i> Actualiser
+                </button>
+            </div>
+        </header>
+
+        <!-- BANDEAU SANTÉ DES DONNÉES : ne s'affiche QUE si une série critique manque/est périmée -->
+        <div class="data-health-banner" id="data-health-banner" style="display:none; align-items:center; gap:10px; background:#3a1f1f; color:#ff8a80; border:1px solid #ff5252; border-radius:10px; padding:12px 16px; margin-bottom:16px; font-weight:600;"></div>
+
+        <!-- MON EDGE : Verdict Unifié BUY / SELL / ATTENTE -->
+        <div class="card verdict-card" id="verdict-card">
+            <div class="verdict-main">
+                <div class="verdict-icon" id="verdict-icon">
+                    <i data-lucide="loader"></i>
+                </div>
+                <div class="verdict-text">
+                    <span class="verdict-eyebrow">MON EDGE — VERDICT ACTUEL</span>
+                    <h2 class="verdict-title" id="verdict-title">Analyse en cours...</h2>
+                    <p class="verdict-subtitle" id="verdict-subtitle">Synthèse de tous les indicateurs macro, techniques et de corrélation.</p>
+                </div>
+                <div class="verdict-confidence">
+                    <span class="confidence-label">Force du Signal</span>
+                    <div class="confidence-bar-bg">
+                        <div class="confidence-bar-fill" id="confidence-bar-fill"></div>
+                    </div>
+                    <span class="confidence-value" id="confidence-value">0 / 10</span>
+                </div>
+            </div>
+            <div class="verdict-reasons" id="verdict-reasons">
+                <!-- Rempli dynamiquement : liste des facteurs favorables / défavorables -->
+            </div>
+            <div class="verdict-warning" id="verdict-warning" style="display: none;">
+                <i data-lucide="alert-triangle"></i>
+                <span id="verdict-warning-text"></span>
+            </div>
+        </div>
+
+        <!-- GESTION DU RISQUE : Stop/Objectif basés sur l'ATR (pour tenir la position) -->
+        <div class="card risk-card" id="risk-card">
+            <div class="risk-header">
+                <h2><i data-lucide="shield"></i> Gestion du Risque — Basée sur l'ATR</h2>
+                <span class="risk-subtitle">Distances calculées sur la volatilité réelle, pas une valeur fixe — pour survivre au bruit M15 et tenir jusqu'à une session complète.</span>
+            </div>
+            <div class="risk-grid" id="risk-grid">
+                <div class="risk-item">
+                    <span class="risk-label">ATR Quotidien (14j)</span>
+                    <span class="risk-value" id="risk-atr">-</span>
+                </div>
+                <div class="risk-item risk-item-sl">
+                    <span class="risk-label">Stop-Loss Suggéré (1x ATR)</span>
+                    <span class="risk-value" id="risk-sl">-</span>
+                </div>
+                <div class="risk-item risk-item-tp">
+                    <span class="risk-label">Objectif Suggéré (2x ATR)</span>
+                    <span class="risk-value" id="risk-tp">-</span>
+                </div>
+                <div class="risk-item">
+                    <span class="risk-label">Ratio Risque/Récompense</span>
+                    <span class="risk-value">1 : 2</span>
+                </div>
+            </div>
+            <p class="risk-note" id="risk-note">Ce stop est volontairement large : il est fait pour survivre à une journée de bruit M15, pas pour être serré. Si votre thèse (macro + M15 + corrélations) tient toujours, une mèche contre vous qui reste dans cette zone n'est pas une raison de couper.</p>
+        </div>
+
+        <!-- SUIVI DE THÈSE : Hold vs Cut, objectif, pas au feeling -->
+        <div class="card thesis-card" id="thesis-card">
+            <div class="thesis-empty-state" id="thesis-empty-state">
+                <h2><i data-lucide="target"></i> Mon Trade Actuel</h2>
+                <p class="thesis-empty-text">Aucun trade enregistré. Quand vous entrez en position, cliquez sur "Enregistrer ce Trade" pour que l'app suive objectivement si votre thèse tient toujours, au lieu de réagir à chaque bougie M15.</p>
+                <button class="btn-save-trade" id="btn-save-trade" onclick="handleSaveTradeClick();" disabled>
+                    <i data-lucide="bookmark-plus"></i> Enregistrer ce Trade
+                </button>
+                <p class="thesis-empty-hint" id="thesis-empty-hint">Disponible quand Mon Edge affiche ACHETER ou VENDRE.</p>
+            </div>
+            <div class="thesis-active-state" id="thesis-active-state" style="display: none;">
+                <div class="thesis-header">
+                    <div>
+                        <span class="thesis-eyebrow">TRADE EN COURS</span>
+                        <h2 id="thesis-direction-title">-</h2>
+                    </div>
+                    <button class="btn-close-trade" id="btn-close-trade" onclick="handleCloseTradeClick();">
+                        <i data-lucide="x-circle"></i> Clôturer le Trade
+                    </button>
+                </div>
+                <div class="thesis-meta-grid">
+                    <div class="thesis-meta-item">
+                        <span class="risk-label">Prix d'Entrée</span>
+                        <span class="risk-value" id="thesis-entry-price">-</span>
+                    </div>
+                    <div class="thesis-meta-item">
+                        <span class="risk-label">Depuis</span>
+                        <span class="risk-value" id="thesis-elapsed">-</span>
+                    </div>
+                    <div class="thesis-meta-item">
+                        <span class="risk-label">À l'entrée</span>
+                        <span class="risk-value" id="thesis-entry-count">-</span>
+                    </div>
+                    <div class="thesis-meta-item">
+                        <span class="risk-label">Maintenant</span>
+                        <span class="risk-value" id="thesis-current-count">-</span>
+                    </div>
+                </div>
+                <div class="thesis-verdict-banner" id="thesis-verdict-banner">
+                    <i data-lucide="check-circle" id="thesis-verdict-icon"></i>
+                    <span id="thesis-verdict-text">-</span>
+                </div>
+                <div class="thesis-time-warning" id="thesis-time-warning" style="display: none;">
+                    <i data-lucide="clock"></i>
+                    <span id="thesis-time-warning-text"></span>
+                </div>
+                <div class="thesis-reasons-compare" id="thesis-reasons-compare">
+                    <!-- Rempli dynamiquement -->
+                </div>
+            </div>
+        </div>
+
+        <!-- JOURNAL & STATS : win rate et expectancy réels, calculés sur les trades clôturés -->
+        <div class="card thesis-card" id="journal-stats-card">
+            <h2><i data-lucide="bar-chart-3"></i> Journal & Stats — Performance Réalisée</h2>
+            <p class="thesis-empty-hint" style="margin-bottom:12px;">Calculé uniquement sur les trades que vous clôturez via "Clôturer le Trade" ci-dessus, en indiquant un prix de sortie.</p>
+            <div id="journal-stats-body"></div>
+        </div>
+
+        <!-- Top Overview Dashboard (M15 & Macro) -->
+        <div class="overview-grid">
+            
+            <!-- Global Edge Score Card (Macro Filter) -->
+            <div class="card edge-score-card">
+                <div class="card-header">
+                    <h2><i data-lucide="filter"></i> Biais Directionnel Macro (HTF)</h2>
+                    <span class="info-tooltip" title="Biais long terme déterminé par la checklist fondamentale (FRED & Daily YF). N'ouvrez de positions de scalp que dans ce sens !">
+                        <i data-lucide="info"></i>
+                    </span>
+                </div>
+                <div class="score-container">
+                    <div class="gauge-wrapper">
+                        <svg class="gauge-svg" viewBox="0 0 120 120">
+                            <path class="gauge-track" d="M 20 100 A 50 50 0 1 1 100 100" fill="none" stroke-width="8"></path>
+                            <path class="gauge-fill" id="gauge-fill" d="M 20 100 A 50 50 0 1 1 100 100" fill="none" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2"></path>
+                        </svg>
+                        <div class="gauge-text">
+                            <span id="score-percentage">0%</span>
+                            <span id="score-label">Neutral</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="score-legend">
+                    <span class="leg-bear"><i data-lucide="arrow-down-circle"></i> Short Only</span>
+                    <span class="leg-neu">Bi-Directionnel</span>
+                    <span class="leg-bull"><i data-lucide="arrow-up-circle"></i> Long Only</span>
+                </div>
+            </div>
+
+            <!-- ADR Tracker Card -->
+            <div class="card adr-card">
+                <div class="card-header">
+                    <h2><i data-lucide="compass"></i> ADR Tracker (Range Quotidien)</h2>
+                    <span class="badge" id="adr-status-badge">VOLATILITÉ OK</span>
+                </div>
+                <div class="adr-container">
+                    <div class="adr-stats">
+                        <div class="adr-stat">
+                            <span class="stat-lbl">Range Actuel</span>
+                            <span class="stat-val" id="adr-current-range">$0.00</span>
+                        </div>
+                        <div class="adr-stat">
+                            <span class="stat-lbl">ADR 10 Jours</span>
+                            <span class="stat-val" id="adr-10d">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="adr-progress-wrapper">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="adr-progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-labels">
+                            <span id="adr-percentage">0% de l'ADR rempli</span>
+                            <span id="adr-exhaustion-warning" style="display: none; color: var(--color-red); font-weight: 700;">ESSOUFFLEMENT !</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="adr-prices-grid">
+                    <div class="p-item"><span>Haut Jour</span><strong id="day-high">$0.00</strong></div>
+                    <div class="p-item"><span>Bas Jour</span><strong id="day-low">$0.00</strong></div>
+                </div>
+            </div>
+
+            <!-- Signal M15 & Alertes -->
+            <div class="card signal-card" id="signal-card">
+                <div class="card-header">
+                    <h2><i data-lucide="zap"></i> Signal M15</h2>
+                    <span class="badge" id="signal-badge">PATIENCE</span>
+                </div>
+                <div class="signal-body">
+                    <div class="signal-icon-large" id="signal-icon-large">
+                        <i data-lucide="clock"></i>
+                    </div>
+                    <div class="signal-details">
+                        <p class="signal-title" id="signal-text-summary">Analyse intraday...</p>
+                        <p class="signal-desc" id="signal-desc-detail">Calcul des croisements de moyennes mobiles M15 et des sweeps de liquidité.</p>
+                    </div>
+                </div>
+                <div class="signal-alerts" id="signal-alerts-list">
+                    <!-- Dynamic Alert Badges -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workspace (Liquidity & Correlations + Charts) -->
+        <div class="workspace-grid">
+            
+            <!-- Left Pane: Cartographie de Liquidite M15 & Sessions -->
+            <div class="left-pane-container">
+                
+                <!-- Session Levels (Liquidity Zones) -->
+                <div class="card session-levels-card">
+                    <div class="card-header">
+                        <h2><i data-lucide="target"></i> Cartographie de la Liquidité</h2>
+                        <span class="info-tooltip" title="Les zones de liquidité clés (plus hauts/bas). Le prix a tendance à chasser les stop-loss au-delà de ces niveaux avant de se retourner.">
+                            <i data-lucide="info"></i>
+                        </span>
+                    </div>
+                    <div class="session-levels-list">
+                        <div class="level-row" id="level-pdh">
+                            <span class="level-name">High Veille (PDH)</span>
+                            <span class="level-price" id="price-pdh">$0.00</span>
+                            <span class="level-status" id="status-pdh">Stable</span>
+                        </div>
+                        <div class="level-row" id="level-asiah">
+                            <span class="level-name">High Asie (AsiaH)</span>
+                            <span class="level-price" id="price-asiah">$0.00</span>
+                            <span class="level-status" id="status-asiah">Stable</span>
+                        </div>
+                        <div class="level-row" id="level-do">
+                            <span class="level-name">Daily Open (DO)</span>
+                            <span class="level-price" id="price-do">$0.00</span>
+                            <span class="level-status" id="status-do">Stable</span>
+                        </div>
+                        <div class="level-row" id="level-asial">
+                            <span class="level-name">Low Asie (AsiaL)</span>
+                            <span class="level-price" id="price-asial">$0.00</span>
+                            <span class="level-status" id="status-asial">Stable</span>
+                        </div>
+                        <div class="level-row" id="level-pdl">
+                            <span class="level-name">Low Veille (PDL)</span>
+                            <span class="level-price" id="price-pdl">$0.00</span>
+                            <span class="level-status" id="status-pdl">Stable</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Intraday Correlation Table -->
+                <div class="card correlation-card">
+                    <div class="card-header">
+                        <h2><i data-lucide="git-compare"></i> Corrélations Intraday M15</h2>
+                    </div>
+                    <div class="table-container">
+                        <table class="correlation-table">
+                            <thead>
+                                <tr>
+                                    <th>Actif</th>
+                                    <th>Tendance M15</th>
+                                    <th>Corrélation Or</th>
+                                    <th>État</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="cell-indicator">USD/JPY (Dollar/Yen)</td>
+                                    <td id="trend-jpy">-</td>
+                                    <td class="color-inverse">Inverse (-90%)</td>
+                                    <td><span class="state-badge" id="badge-jpy">Neutre</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="cell-indicator">US10Y (Yield US 10 ans)</td>
+                                    <td id="trend-us10y">-</td>
+                                    <td class="color-inverse">Inverse (-85%)</td>
+                                    <td><span class="state-badge" id="badge-us10y">Neutre</span></td>
+                                </tr>
+                                <tr>
+                                    <td class="cell-indicator">XAU/USD (Or)</td>
+                                    <td id="trend-gold">-</td>
+                                    <td style="color: var(--color-gold);">Pivot (0%)</td>
+                                    <td><span class="state-badge" id="badge-gold">Neutre</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Pane: Charts & Analytics -->
+            <div class="card charting-card">
+                <div class="card-header charting-header">
+                    <div class="chart-title">
+                        <h2><i data-lucide="line-chart"></i> Graphiques Financiers</h2>
+                    </div>
+                    <div class="chart-tabs" id="chart-tabs">
+                        <button class="tab-btn active" data-tab="tab-gold-m15"><i data-lucide="zap"></i> Or M15 (EMA 9/50)</button>
+                        <button class="tab-btn" data-tab="tab-correlations-m15"><i data-lucide="git-compare"></i> Corrélations M15</button>
+                        <button class="tab-btn" data-tab="tab-gold-daily"><i data-lucide="activity"></i> Or Daily (MM200)</button>
+                        <button class="tab-btn" data-tab="tab-macro-daily"><i data-lucide="globe"></i> Filtres Macro</button>
+                    </div>
+                </div>
+                
+                <div class="chart-workspace">
+                    <div class="tab-content active" id="tab-gold-m15">
+                        <div class="chart-container" id="chart-gold-m15-container"></div>
+                    </div>
+                    <div class="tab-content" id="tab-correlations-m15">
+                        <div class="chart-container" id="chart-correlations-m15-container"></div>
+                    </div>
+                    <div class="tab-content" id="tab-gold-daily">
+                        <div class="chart-container" id="chart-gold-daily-container"></div>
+                    </div>
+                    <div class="tab-content" id="tab-macro-daily">
+                        <div class="chart-container" id="chart-macro-daily-container"></div>
+                    </div>
+                    <!-- Legend overlay inside the chart container -->
+                    <div class="chart-legend" id="chart-legend-overlay">
+                        <div class="legend-series" id="legend-series-primary">Or M15 : -</div>
+                        <div class="legend-series" id="legend-series-secondary">EMA 9/50 : -</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Load the generated data file -->
+    <script src="data.js"></script>
+    <!-- Load the main app logic -->
+    <script src="app.js"></script>
+</body>
+</html>

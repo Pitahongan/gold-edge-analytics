@@ -1,0 +1,50 @@
+name: Gold Edge Cloud Notify
+
+# Filet de securite : verifie le marche et envoie les alertes Telegram
+# independamment du PC local (ex: PC eteint, en deplacement). Toutes les
+# 15 min, comme la tache planifiee locale GoldEdge-AutoRefresh. Necessite
+# les secrets FRED_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID configures
+# dans Settings > Secrets and variables > Actions de ce depot.
+#
+# Notifications Windows non disponibles ici (runner Linux/cloud) -> seul
+# Telegram fonctionne depuis ce workflow, ce qui est le but recherche
+# (le telephone est toujours a portee, meme PC eteint).
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gold-edge-cloud-notify
+  cancel-in-progress: false
+
+jobs:
+  check-and-notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lancer Update-Data.ps1
+        shell: pwsh
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: ./Update-Data.ps1
+
+      - name: Committer l'etat cloud (dedup notifications)
+        run: |
+          git config user.name "gold-edge-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add notify_state.cloud.json edge_log.cloud.txt 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Cloud check-in [skip ci]"
+            git push
+          else
+            echo "Rien a committer (etat inchange)."
+          fi

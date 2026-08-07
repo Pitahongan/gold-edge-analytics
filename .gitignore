@@ -1,0 +1,13 @@
+# Secrets et donnees locales : ne JAMAIS committer
+config.json
+data.js
+notify_state.json
+edge_log.txt
+auto_refresh_log.txt
+
+# Fichiers OS / editeur
+Thumbs.db
+.DS_Store
+
+# Config locale de l'outil (chemins specifiques a cette machine)
+.claude/
