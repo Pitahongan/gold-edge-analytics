@@ -41,7 +41,16 @@ jobs:
         run: |
           git config user.name "gold-edge-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add notify_state.cloud.json edge_log.cloud.txt 2>/dev/null || true
+          # Ajouter chacun individuellement : notify_state.cloud.json n'existe
+          # pas tant qu'aucun edge fort/modere n'a ete notifie -> un "git add"
+          # groupe avec un fichier absent echoue pour TOUS les fichiers listes,
+          # ce qui empechait meme edge_log.cloud.txt (toujours cree, lui) d'etre
+          # committe. Bug reel observe sur le tout premier run.
+          for f in notify_state.cloud.json edge_log.cloud.txt; do
+            if [ -f "$f" ]; then
+              git add "$f"
+            fi
+          done
           if ! git diff --cached --quiet; then
             git commit -m "Cloud check-in [skip ci]"
             git push
