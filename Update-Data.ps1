@@ -14,9 +14,9 @@ $isCloud = $env:GITHUB_ACTIONS -eq 'true'
 $configPath = Join-Path $PSScriptRoot "config.json"
 $config = if (Test-Path $configPath) { Get-Content -Raw $configPath | ConvertFrom-Json } else { $null }
 
-$fredApiKey = if ($env:FRED_API_KEY) { $env:FRED_API_KEY } else { $config.fred_api_key }
-$telegramBotToken = if ($env:TELEGRAM_BOT_TOKEN) { $env:TELEGRAM_BOT_TOKEN } else { $config.telegram_bot_token }
-$telegramChatId = if ($env:TELEGRAM_CHAT_ID) { $env:TELEGRAM_CHAT_ID } else { $config.telegram_chat_id }
+$fredApiKey = if ($isCloud) { $env:FRED_API_KEY } else { $config.fred_api_key }
+$telegramBotToken = if ($isCloud) { $env:TELEGRAM_BOT_TOKEN } else { $config.telegram_bot_token }
+$telegramChatId = if ($isCloud) { $env:TELEGRAM_CHAT_ID } else { $config.telegram_chat_id }
 
 if ([string]::IsNullOrEmpty($fredApiKey)) {
     Write-Error "Clé d'API FRED introuvable (ni config.json, ni `$env:FRED_API_KEY)."

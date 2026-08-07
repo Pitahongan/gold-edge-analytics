@@ -45,8 +45,17 @@ Write-Host "vraies nouvelles donnees. Fermez cette fenetre (ou Ctrl+C)"
 Write-Host "pour tout arreter."
 Write-Host ""
 
-# Ouvre automatiquement le dashboard dans le navigateur par defaut
-Start-Process ($prefix + "index.html")
+# Ouvre automatiquement le dashboard dans Chrome, profil "Pierre VIDE"
+# (Profile 6, videgnonp@gmail.com) -- meme convention que BTC_Edge_Monitor_Chrome,
+# pour garder les dashboards de trading regroupes dans ce profil dedie.
+# Fallback sur le navigateur par defaut si Chrome n'est pas trouve a cet
+# emplacement standard (ex: installe ailleurs, ou machine differente).
+$chromePath = "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+if (Test-Path $chromePath) {
+    Start-Process -FilePath $chromePath -ArgumentList "--profile-directory=`"Profile 6`"", ($prefix + "index.html")
+} else {
+    Start-Process ($prefix + "index.html")
+}
 
 $mimeTypes = @{
     ".html" = "text/html; charset=utf-8"
