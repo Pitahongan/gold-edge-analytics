@@ -144,3 +144,4 @@
 2026-08-14 08:50:58 | verdict=wait | score=0.14/8 | macro=20% | goldTrend=neutral | h4Trend=bullish | jpyTrend=bearish | us10yTrend=bearish | nearSupport=False | nearResistance=False | cotZ=1.854
 2026-08-14 10:08:04 | verdict=wait | score=1.64/8 | macro=20% | goldTrend=bullish | h4Trend=bullish | jpyTrend=bearish | us10yTrend=bearish | nearSupport=False | nearResistance=True | cotZ=1.854
 2026-08-14 11:09:17 | verdict=buy | score=2.64/8 | macro=20% | goldTrend=bullish | h4Trend=bullish | jpyTrend=bearish | us10yTrend=bearish | nearSupport=False | nearResistance=False | cotZ=1.854
+2026-08-14 11:58:48 | verdict=wait | score=1.63/8 | macro=20% | goldTrend=bullish | h4Trend=bullish | jpyTrend=bearish | us10yTrend=bearish | nearSupport=False | nearResistance=True | cotZ=1.854
