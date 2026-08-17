@@ -261,3 +261,4 @@
 2026-08-17 19:35:14 | verdict=wait | score=-0.39/8 | macro=20% | goldTrend=bullish | h4Trend=bullish | jpyTrend=bullish | us10yTrend=bullish | nearSupport=False | nearResistance=True | cotZ=2.411
 2026-08-17 20:02:02 | verdict=wait | score=-0.39/8 | macro=20% | goldTrend=bullish | h4Trend=bullish | jpyTrend=bullish | us10yTrend=bullish | nearSupport=False | nearResistance=True | cotZ=2.411
 2026-08-17 20:45:29 | verdict=wait | score=-0.39/8 | macro=20% | goldTrend=bullish | h4Trend=bullish | jpyTrend=bullish | us10yTrend=bullish | nearSupport=False | nearResistance=True | cotZ=2.411
+2026-08-17 21:29:40 | verdict=wait | score=0.11/8 | macro=20% | goldTrend=bullish | h4Trend=bullish | jpyTrend=neutral | us10yTrend=bullish | nearSupport=False | nearResistance=True | cotZ=2.411
